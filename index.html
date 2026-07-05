@@ -328,8 +328,8 @@
                 const faceWidth = detection.boundingBox.width;
 
                 // 📐 しきい値の調整（一般的な床置き距離のベストバランス）
-                const DOWN_THRESHOLD = 0.42; // これ以上大きくなったら「体を下げた」
-                const UP_THRESHOLD = 0.35;   // これ以下に小さくなったら「体を上げた」
+                const DOWN_THRESHOLD = 0.28; // これ以上大きくなったら「体を下げた」
+                const UP_THRESHOLD = 0.22;   // これ以下に小さくなったら「体を上げた」
 
                 if (!isDown && faceWidth > DOWN_THRESHOLD) {
                     // 体が下がった！
