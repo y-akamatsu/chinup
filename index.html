@@ -3,10 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>AI Push-Up Counter</title>
+    <title>AI Push-Up Counter (TFJS)</title>
     
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/mediapipe-face_detection/0.4.1646425243/face_detection.js" crossorigin="anonymous"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/mediapipe-camera_utils/0.4.1646424315/camera_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-core"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-converter"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-backend-webgl"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/blazeface"></script>
 
     <style>
         :root {
@@ -198,7 +200,7 @@
         <div class="main-card">
             <div class="ai-indicator">
                 <div id="aiDot" class="dot"></div>
-                <span id="aiText">AI起動中...</span>
+                <span id="aiText">AIシステム起動中...</span>
             </div>
 
             <div class="camera-box">
@@ -217,7 +219,7 @@
                 </div>
             </div>
 
-            <div id="statusMessage">カメラを許可してね</div>
+            <div id="statusMessage">AI読み込み中...</div>
         </div>
 
         <button id="resetBtn" class="btn-reset">リセット</button>
@@ -229,7 +231,7 @@
         let jaVoice = null;
         let isCompleted = false;
         let isDown = false; 
-        let aiInitialized = false; // AIが最初に顔を捉えたかどうかのフラグ
+        let model = null;
 
         const RADIUS = 98;
         const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
@@ -300,54 +302,74 @@
             }
         }
 
-        // --- 🤖 改良されたAI認識判定ロジック ---
-        function onResults(results) {
-            // カメラから1フレームでもデータが来たら、まずインジケーターを緑にする
-            if (!aiInitialized) {
-                aiInitialized = true;
+        // ✨ カメラのストリームを起動する関数
+        async function setupCamera() {
+            const stream = await navigator.mediaDevices.getUserMedia({
+                video: { facingMode: 'user', width: 320, height: 240 },
+                audio: false
+            });
+            videoElement.srcObject = stream;
+            return new Promise((resolve) => {
+                videoElement.onloadedmetadata = () => resolve(videoElement);
+            });
+        }
+
+        // ✨ AIモデル（Blazeface）を読み込んでループ処理を開始する関数
+        async function initAI() {
+            try {
+                statusMessage.textContent = "AIモデルを準備中...";
+                await setupCamera();
+                videoElement.play();
+
+                // Blazefaceモデルのロード
+                model = await blazeface.load();
+                
+                // 初期化完了時のUI変更
                 aiDot.classList.add('active');
-                aiText.textContent = "AI解析中";
+                aiText.textContent = "AI稼働中";
                 statusMessage.textContent = "準備完了！床に置いてね";
-            }
 
-            if (results.detections && results.detections.length > 0) {
-                const detection = results.detections[0];
-                const faceWidth = detection.boundingBox.width;
-
-                // スマホの広角レンズに最適化したしきい値（かなり近づかなくても反応するように甘めに設定）
-                const DOWN_THRESHOLD = 0.25; 
-                const UP_THRESHOLD = 0.20;   
-
-                if (!isDown && faceWidth > DOWN_THRESHOLD) {
-                    isDown = true;
-                    statusMessage.textContent = "キープ！";
-                } else if (isDown && faceWidth < UP_THRESHOLD) {
-                    isDown = false;
-                    statusMessage.textContent = "アップ！";
-                    handleCount();
-                }
+                // AIループスタート
+                detectFaceLoop();
+            } catch (e) {
+                console.error(e);
+                statusMessage.textContent = "エラー: カメラかAIの起動に失敗";
             }
         }
 
-        const faceDetection = new FaceDetection({
-            locateFile: (file) => `https://cdnjs.cloudflare.com/ajax/libs/mediapipe-face_detection/0.4.1646425243/${file}`
-        });
-        
-        faceDetection.setOptions({
-            model: 'short',
-            minDetectionConfidence: 0.3 // 認識感度を最大までアップ
-        });
-        
-        faceDetection.onResults(onResults);
+        // ✨ 毎フレームの顔認識ループ処理
+        async function detectFaceLoop() {
+            if (model && videoElement.readyState >= 2) {
+                const predictions = await model.estimateFaces(videoElement, false);
 
-        const camera = new Camera(videoElement, {
-            onFrame: async () => {
-                await faceDetection.send({ image: videoElement });
-            },
-            width: 320,
-            height: 240
-        });
-        camera.start();
+                if (predictions.length > 0) {
+                    const prediction = predictions[0];
+                    
+                    // 顔の対角線上のサイズ（右上の座標と左下の座標の距離から算出）
+                    const start = prediction.topLeft;
+                    const end = prediction.bottomRight;
+                    const faceSize = (end[0] - start[0]) / videoElement.videoWidth;
+
+                    // TensorFlow.js用にチューニングした距離（深度）のしきい値
+                    const DOWN_THRESHOLD = 0.40; 
+                    const UP_THRESHOLD = 0.32;   
+
+                    if (!isDown && faceSize > DOWN_THRESHOLD) {
+                        isDown = true;
+                        statusMessage.textContent = "キープ！";
+                    } else if (isDown && faceSize < UP_THRESHOLD) {
+                        isDown = false;
+                        statusMessage.textContent = "アップ！";
+                        handleCount();
+                    }
+                }
+            }
+            // 次のフレームを要求（バッテリー消費を抑えつつ高速にループ）
+            requestAnimationFrame(detectFaceLoop);
+        }
+
+        // ページ読み込み完了後にAIを初期化
+        window.addEventListener('DOMContentLoaded', initAI);
 
         targetSelect.addEventListener('change', (e) => {
             target = parseInt(e.target.value);
