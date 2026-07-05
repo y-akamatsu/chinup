@@ -3,13 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>AI Push-Up Counter (TFJS)</title>
-    
-    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-core"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-converter"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-backend-webgl"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/blazeface"></script>
-
+    <title>Push-Up Counter with Calendar</title>
     <style>
         :root {
             --bg-color: #121824;
@@ -17,19 +11,20 @@
             --primary-color: #00e676;
             --text-main: #ffffff;
             --text-sub: #94a3b8;
+            --calendar-border: #334155;
         }
         body {
             font-family: 'Helvetica Neue', Arial, sans-serif;
             background-color: var(--bg-color);
             color: var(--text-main);
             margin: 0;
-            padding: 0;
+            padding: 20px 0;
             display: flex;
             flex-direction: column;
             align-items: center;
-            justify-content: center;
+            justify-content: flex-start;
             min-height: 100vh;
-            overflow-x: hidden;
+            overflow-y: auto;
             user-select: none;
             -webkit-user-select: none;
         }
@@ -57,24 +52,31 @@
             font-weight: bold;
             outline: none;
         }
-        .main-card {
+        /* メインカウンターカード */
+        .tap-zone {
             background: var(--card-bg);
             width: 100%;
-            height: 65vh;
-            max-height: 460px;
-            border-radius: 32px;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+            height: 45vh;
+            max-height: 320px;
+            border-radius: 24px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
             border: 4px solid #334155;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
+            cursor: pointer;
             position: relative;
+            transition: transform 0.05s ease, border-color 0.2s;
+        }
+        .tap-zone:active {
+            transform: scale(0.97);
+            border-color: var(--primary-color);
         }
         .circle-container {
             position: relative;
-            width: 220px;
-            height: 220px;
+            width: 160px;
+            height: 160px;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -86,12 +88,12 @@
         .circle-bg {
             fill: none;
             stroke: #0f172a;
-            stroke-width: 12;
+            stroke-width: 10;
         }
         .circle-progress {
             fill: none;
             stroke: var(--primary-color);
-            stroke-width: 12;
+            stroke-width: 10;
             stroke-linecap: round;
             transition: stroke-dashoffset 0.2s ease-out;
         }
@@ -102,67 +104,84 @@
             align-items: center;
         }
         .counter-display {
-            font-size: 64px;
+            font-size: 48px;
             font-weight: 900;
             line-height: 1;
         }
         .reps-label {
-            font-size: 14px;
-            color: var(--text-sub);
-            font-weight: bold;
-            letter-spacing: 1px;
-            margin-top: 4px;
-        }
-        .target-display {
             font-size: 12px;
             color: var(--text-sub);
-            margin-top: 4px;
-        }
-        .camera-box {
-            position: absolute;
-            top: 16px;
-            right: 16px;
-            width: 70px;
-            height: 52px;
-            border-radius: 8px;
-            overflow: hidden;
-            border: 2px solid #334155;
-            background: #000;
-            transform: scaleX(-1);
-        }
-        video {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
-        .ai-indicator {
-            position: absolute;
-            top: 24px;
-            left: 24px;
-            font-size: 12px;
             font-weight: bold;
-            color: var(--text-sub);
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
-        .dot {
-            width: 8px;
-            height: 8px;
-            background-color: #ef4444;
-            border-radius: 50%;
-            transition: background-color 0.2s;
-        }
-        .dot.active {
-            background-color: var(--primary-color);
-            box-shadow: 0 0 8px var(--primary-color);
+            margin-top: 2px;
         }
         #statusMessage {
             position: absolute;
-            bottom: 24px;
-            font-size: 16px;
+            bottom: 16px;
+            font-size: 14px;
             font-weight: bold;
             color: var(--primary-color);
+        }
+        
+        /* ✨ カレンダーエリアのデザイン */
+        .calendar-card {
+            background: var(--card-bg);
+            width: 100%;
+            border-radius: 24px;
+            border: 2px solid var(--calendar-border);
+            padding: 16px;
+            box-sizing: border-box;
+        }
+        .calendar-header {
+            font-size: 16px;
+            font-weight: bold;
+            text-align: center;
+            margin-bottom: 12px;
+            color: var(--text-main);
+        }
+        .calendar-grid {
+            display: table;
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .calendar-row {
+            display: table-row;
+        }
+        .calendar-cell {
+            display: table-cell;
+            width: 14.28%;
+            text-align: center;
+            padding: 8px 0;
+            font-size: 12px;
+            color: var(--text-sub);
+            vertical-align: middle;
+        }
+        .calendar-day-header {
+            font-weight: bold;
+            color: #64748b;
+            border-bottom: 1px solid var(--calendar-border);
+        }
+        /* ✨ 筋トレを達成した日の丸バッジ */
+        .workout-day {
+            display: block;
+            width: 26px;
+            height: 26px;
+            line-height: 26px;
+            margin: 0 auto;
+            border-radius: 50%;
+            background-color: rgba(0, 230, 118, 0.15);
+            color: var(--primary-color);
+            font-weight: bold;
+            border: 1px solid var(--primary-color);
+        }
+        .empty-cell {
+            color: transparent;
+        }
+
+        .actions {
+            display: flex;
+            gap: 12px;
+            width: 100%;
+            justify-content: center;
         }
         .btn-reset {
             background: transparent;
@@ -170,14 +189,9 @@
             color: var(--text-sub);
             padding: 8px 20px;
             border-radius: 20px;
-            font-size: 14px;
+            font-size: 13px;
             cursor: pointer;
             font-weight: bold;
-            transition: all 0.2s;
-        }
-        .btn-reset:hover {
-            border-color: #ef4444;
-            color: #ef4444;
         }
     </style>
 </head>
@@ -192,37 +206,36 @@
                     <option value="15">15回</option>
                     <option value="20" selected>20回</option>
                     <option value="30">30回</option>
+                    <option value="50">50回</option>
                 </select>
             </div>
             <div id="totalStats">累計: 0回</div>
         </div>
 
-        <div class="main-card">
-            <div class="ai-indicator">
-                <div id="aiDot" class="dot"></div>
-                <span id="aiText">AIシステム起動中...</span>
-            </div>
-
-            <div class="camera-box">
-                <video id="webcam" autoplay playsinline muted></video>
-            </div>
-
+        <div id="tapZone" class="tap-zone">
             <div class="circle-container">
-                <svg class="circle-svg" width="220" height="220">
-                    <circle class="circle-bg" cx="110" cy="110" r="98"></circle>
-                    <circle id="progressBar" class="circle-progress" cx="110" cy="110" r="98"></circle>
+                <svg class="circle-svg" width="160" height="160">
+                    <circle class="circle-bg" cx="80" cy="80" r="70"></circle>
+                    <circle id="progressBar" class="circle-progress" cx="80" cy="80" r="70"></circle>
                 </svg>
                 <div class="counter-box">
                     <div id="counter" class="counter-display">0</div>
                     <div class="reps-label">REPS</div>
-                    <div class="target-display">/ <span id="targetLabel">20</span> 回</div>
+                    <div style="font-size:11px; color:var(--text-sub); margin-top:2px;">/ <span id="targetLabel">20</span>回</div>
                 </div>
             </div>
-
-            <div id="statusMessage">AI読み込み中...</div>
+            <div id="statusMessage">アゴでタップしてスタート！</div>
         </div>
 
-        <button id="resetBtn" class="btn-reset">リセット</button>
+        <div class="actions">
+            <button id="resetBtn" class="btn-reset">リセット</button>
+        </div>
+
+        <div class="calendar-card">
+            <div id="calendarTitle" class="calendar-header">2026年 7月</div>
+            <div class="calendar-grid" id="calendarGrid">
+                </div>
+        </div>
     </div>
 
     <script>
@@ -230,13 +243,11 @@
         let target = 20;
         let jaVoice = null;
         let isCompleted = false;
-        let isDown = false; 
-        let model = null;
 
-        const RADIUS = 98;
+        const RADIUS = 70;
         const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
 
-        const videoElement = document.getElementById('webcam');
+        const tapZone = document.getElementById('tapZone');
         const counterEl = document.getElementById('counter');
         const progressBar = document.getElementById('progressBar');
         const targetSelect = document.getElementById('targetSelect');
@@ -244,24 +255,109 @@
         const resetBtn = document.getElementById('resetBtn');
         const statusMessage = document.getElementById('statusMessage');
         const totalStatsEl = document.getElementById('totalStats');
-        const aiDot = document.getElementById('aiDot');
-        const aiText = document.getElementById('aiText');
+        const calendarGrid = document.getElementById('calendarGrid');
+        const calendarTitle = document.getElementById('calendarTitle');
 
         progressBar.style.strokeDasharray = `${CIRCUMFERENCE} ${CIRCUMFERENCE}`;
         progressBar.style.strokeDashoffset = CIRCUMFERENCE;
 
-        function loadTotalCount() {
-            const savedTotal = localStorage.getItem('pushup_total') || 0;
-            totalStatsEl.textContent = `累計: ${savedTotal}回`;
+        // 📅 今日の日付文字列を取得 (YYYY-MM-DD形式)
+        function getTodayString() {
+            const now = new Date();
+            const y = now.getFullYear();
+            const m = String(now.getMonth() + 1).padStart(2, '0');
+            const d = String(now.getDate()).padStart(2, '0');
+            return `${y}-${m}-${d}`;
         }
 
-        function saveToTotal(reps) {
-            const currentTotal = parseInt(localStorage.getItem('pushup_total') || 0);
-            localStorage.setItem('pushup_total', currentTotal + reps);
-            loadTotalCount();
-        }
-        loadTotalCount();
+        // 💾 【カレンダー対応】データの読み込みと描画
+        function loadLogs() {
+            // 履歴データオブジェクトを取得（なければ空のオブジェクト）
+            const logs = JSON.parse(localStorage.getItem('pushup_logs') || '{}');
+            
+            // 累計回数の計算
+            let total = 0;
+            for (let date in logs) {
+                total += logs[date];
+            }
+            totalStatsEl.textContent = `累計: ${total}回`;
 
+            renderCalendar(logs);
+        }
+
+        // 💾 【カレンダー対応】今日の回数を保存
+        function saveLog(reps) {
+            const logs = JSON.parse(localStorage.getItem('pushup_logs') || '{}');
+            const today = getTodayString();
+            
+            // 今日の既存の回数にプラス
+            logs[today] = (logs[today] || 0) + reps;
+            
+            localStorage.setItem('pushup_logs', JSON.stringify(logs));
+            loadLogs(); // カレンダーと累計を再描画
+        }
+
+        // 📅 カレンダー描画エンジン（WeasyPrint互換のtable構造で出力）
+        function renderCalendar(logs) {
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = now.getMonth(); // 0-11
+            
+            calendarTitle.textContent = `${year}年 ${month + 1}月`;
+            calendarGrid.innerHTML = '';
+
+            // 曜日ヘッダー
+            const days = ['日', '月', '火', '水', '木', '金', '土'];
+            let headerRow = document.createElement('div');
+            headerRow.className = 'calendar-row';
+            days.forEach(d => {
+                const cell = document.createElement('div');
+                cell.className = 'calendar-cell calendar-day-header';
+                cell.textContent = d;
+                headerRow.appendChild(cell);
+            });
+            calendarGrid.appendChild(headerRow);
+
+            // 月の初日と総日数
+            const firstDay = new Date(year, month, 1).getDay();
+            const totalDays = new Date(year, month + 1, 0).getDate();
+
+            let currentDay = 1;
+            let html = '';
+
+            for (let i = 0; i < 6; i++) { // 最大6週間分
+                let row = document.createElement('div');
+                row.className = 'calendar-row';
+                let hasCells = false;
+
+                for (let j = 0; j < 7; j++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'calendar-cell';
+
+                    if (i === 0 && j < firstDay) {
+                        cell.innerHTML = '<span class="empty-cell">.</span>';
+                    } else if (currentDay > totalDays) {
+                        cell.innerHTML = '<span class="empty-cell">.</span>';
+                    } else {
+                        const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(currentDay).padStart(2, '0')}`;
+                        
+                        // ✨ その日に筋トレ履歴（ログ）があれば緑丸にする
+                        if (logs[dateStr] && logs[dateStr] > 0) {
+                            cell.innerHTML = `<span class="workout-day" onclick="alert('${month+1}月${currentDay}日: ${logs[dateStr]}回トレ完了！')">${currentDay}</span>`;
+                        } else {
+                            cell.textContent = currentDay;
+                        }
+                        currentDay++;
+                        hasCells = true;
+                    }
+                    row.appendChild(cell);
+                }
+                if (i > 0 && !hasCells) break; // 7日とも空ならループ終了
+                calendarGrid.appendChild(row);
+            }
+        }
+
+        // 音声エンジン
         function loadVoices() {
             const voices = speechSynthesis.getVoices();
             jaVoice = voices.find(voice => voice.lang === 'ja-JP' && voice.name.includes('Google')) || 
@@ -288,10 +384,11 @@
 
         function handleCount() {
             if (isCompleted) return;
+
             count++;
             counterEl.textContent = count;
             updateGauge();
-            saveToTotal(1);
+            saveLog(1); // 1回ごとに即時カレンダーデータへ保存・反映
 
             if (count >= target) {
                 isCompleted = true;
@@ -302,74 +399,14 @@
             }
         }
 
-        // ✨ カメラのストリームを起動する関数
-        async function setupCamera() {
-            const stream = await navigator.mediaDevices.getUserMedia({
-                video: { facingMode: 'user', width: 320, height: 240 },
-                audio: false
-            });
-            videoElement.srcObject = stream;
-            return new Promise((resolve) => {
-                videoElement.onloadedmetadata = () => resolve(videoElement);
-            });
-        }
-
-        // ✨ AIモデル（Blazeface）を読み込んでループ処理を開始する関数
-        async function initAI() {
-            try {
-                statusMessage.textContent = "AIモデルを準備中...";
-                await setupCamera();
-                videoElement.play();
-
-                // Blazefaceモデルのロード
-                model = await blazeface.load();
-                
-                // 初期化完了時のUI変更
-                aiDot.classList.add('active');
-                aiText.textContent = "AI稼働中";
-                statusMessage.textContent = "準備完了！床に置いてね";
-
-                // AIループスタート
-                detectFaceLoop();
-            } catch (e) {
-                console.error(e);
-                statusMessage.textContent = "エラー: カメラかAIの起動に失敗";
-            }
-        }
-
-        // ✨ 毎フレームの顔認識ループ処理
-        async function detectFaceLoop() {
-            if (model && videoElement.readyState >= 2) {
-                const predictions = await model.estimateFaces(videoElement, false);
-
-                if (predictions.length > 0) {
-                    const prediction = predictions[0];
-                    
-                    // 顔の対角線上のサイズ（右上の座標と左下の座標の距離から算出）
-                    const start = prediction.topLeft;
-                    const end = prediction.bottomRight;
-                    const faceSize = (end[0] - start[0]) / videoElement.videoWidth;
-
-                    // TensorFlow.js用にチューニングした距離（深度）のしきい値
-                    const DOWN_THRESHOLD = 0.40; 
-                    const UP_THRESHOLD = 0.32;   
-
-                    if (!isDown && faceSize > DOWN_THRESHOLD) {
-                        isDown = true;
-                        statusMessage.textContent = "キープ！";
-                    } else if (isDown && faceSize < UP_THRESHOLD) {
-                        isDown = false;
-                        statusMessage.textContent = "アップ！";
-                        handleCount();
-                    }
-                }
-            }
-            // 次のフレームを要求（バッテリー消費を抑えつつ高速にループ）
-            requestAnimationFrame(detectFaceLoop);
-        }
-
-        // ページ読み込み完了後にAIを初期化
-        window.addEventListener('DOMContentLoaded', initAI);
+        tapZone.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            handleCount();
+        });
+        tapZone.addEventListener('mousedown', (e) => {
+            if (e.type === 'mousedown' && 'ontouchstart' in window) return;
+            handleCount();
+        });
 
         targetSelect.addEventListener('change', (e) => {
             target = parseInt(e.target.value);
@@ -380,13 +417,15 @@
         function resetCount() {
             count = 0;
             isCompleted = false;
-            isDown = false;
             counterEl.textContent = "0";
-            statusMessage.textContent = "準備完了！";
+            statusMessage.textContent = "アゴでタップしてスタート！";
             updateGauge();
             speechSynthesis.cancel();
         }
         resetBtn.addEventListener('click', resetCount);
+
+        // 初期読み込み
+        window.addEventListener('DOMContentLoaded', loadLogs);
     </script>
 </body>
 </html>
