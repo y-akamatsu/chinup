@@ -129,7 +129,7 @@
             border: 2px solid var(--calendar-border);
             padding: 16px;
             box-sizing: border-box;
-            min-height: 280px; /* 高さが縮むのを防止 */
+            min-height: 280px;
         }
         .calendar-nav {
             display: flex;
@@ -155,7 +155,6 @@
             color: var(--text-main);
         }
         
-        /* バグの原因になっていたtable構造を標準的なdiv/flexに変更 */
         .calendar-grid {
             display: flex;
             flex-direction: column;
@@ -289,7 +288,6 @@
         const prevMonthBtn = document.getElementById('prevMonthBtn');
         const nextMonthBtn = document.getElementById('nextMonthBtn');
 
-        // 🟢 メーターが最初から1周してしまうバグを修正（DasharrayとDashoffsetを完全に同期）
         progressBar.style.strokeDasharray = CIRCUMFERENCE;
         progressBar.style.strokeDashoffset = CIRCUMFERENCE;
 
@@ -322,7 +320,6 @@
             loadLogs();
         }
 
-        // 編集機能
         window.editLogValue = function(dateStr, currentReps) {
             const displayDate = dateStr.replace(/(\d{4})-(\d{2})-(\d{2})/, "$1年$2月$3日");
             const input = prompt(`【回数編集】\n${displayDate} の合計回数を入力してください（0にすると記録が消えます）:`, currentReps);
@@ -346,7 +343,6 @@
             loadLogs();
         };
 
-        // 📅 ブラウザ起因のエラーが出ないよう、安全なDOM生成に修正
         function renderCalendar(logs) {
             const year = currentCalendarDate.getFullYear();
             const month = currentCalendarDate.getMonth();
@@ -354,7 +350,6 @@
             calendarTitle.textContent = `${year}年 ${month + 1}月`;
             calendarGrid.innerHTML = '';
 
-            // 曜日ヘッダー
             const days = ['日', '月', '火', '水', '木', '金', '土'];
             let headerRow = document.createElement('div');
             headerRow.className = 'calendar-row calendar-day-header';
@@ -400,7 +395,6 @@
                             btn.classList.add('workout-day');
                         }
                         
-                        // 全ての日付でタップ編集可能に
                         btn.onclick = (function(dStr, rCount) {
                             return function() { window.editLogValue(dStr, rCount); };
                         })(dateStr, reps);
@@ -425,7 +419,6 @@
             loadLogs();
         });
 
-        // 音声
         function loadVoices() {
             const voices = speechSynthesis.getVoices();
             jaVoice = voices.find(voice => voice.lang === 'ja-JP' && voice.name.includes('Google')) || 
@@ -435,13 +428,27 @@
         loadVoices();
         if (speechSynthesis.onvoiceschanged !== undefined) speechSynthesis.onvoiceschanged = loadVoices;
 
+        // ✨ イントネーション改良版の音声合成ロジック
         function speak(text, isFinish = false) {
             speechSynthesis.cancel();
+            
+            if (isFinish) {
+                // 読点とスペースによる「タメ」を生成
+                text = "目標達成。ナイス、バ ル ク！";
+            }
+
             const utterance = new SpeechSynthesisUtterance(text);
             if (jaVoice) utterance.voice = jaVoice;
             else utterance.lang = 'ja-JP';
-            utterance.rate = 1.1;
-            utterance.pitch = isFinish ? 1.0 : 0.8;
+
+            if (isFinish) {
+                utterance.rate = 0.95;  // 達成時は少しゆっくり、重厚に
+                utterance.pitch = 1.15; // テンションを上げて少し高音に
+            } else {
+                utterance.rate = 1.1;    // カウントはテンポよく
+                utterance.pitch = 0.8;   // 低音でストイックに
+            }
+            
             speechSynthesis.speak(utterance);
         }
 
@@ -466,7 +473,6 @@
             }
         }
 
-        // タップイベントを確実に登録
         tapZone.addEventListener('touchstart', (e) => {
             e.preventDefault();
             handleCount();
