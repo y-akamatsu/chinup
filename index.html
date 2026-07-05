@@ -5,8 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>AI Push-Up Counter</title>
     
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_detection/face_detection.js" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mediapipe-face_detection/0.4.1646425243/face_detection.js" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mediapipe-camera_utils/0.4.1646424315/camera_utils.js" crossorigin="anonymous"></script>
 
     <style>
         :root {
@@ -31,7 +31,6 @@
             user-select: none;
             -webkit-user-select: none;
         }
-        /* レイアウトコンテナ */
         .app-container {
             display: flex;
             flex-direction: column;
@@ -40,7 +39,6 @@
             width: 90vw;
             max-width: 360px;
         }
-        /* 設定と累計表示 */
         .info-bar {
             display: flex;
             justify-content: space-between;
@@ -57,7 +55,6 @@
             font-weight: bold;
             outline: none;
         }
-        /* メインカード */
         .main-card {
             background: var(--card-bg);
             width: 100%;
@@ -72,7 +69,6 @@
             justify-content: center;
             position: relative;
         }
-        /* 円形ゲージ */
         .circle-container {
             position: relative;
             width: 220px;
@@ -120,7 +116,6 @@
             color: var(--text-sub);
             margin-top: 4px;
         }
-        /* ✨ カメラインラインプレビュー（右上に小さく配置） */
         .camera-box {
             position: absolute;
             top: 16px;
@@ -131,14 +126,13 @@
             overflow: hidden;
             border: 2px solid #334155;
             background: #000;
-            transform: scaleX(-1); /* 鏡のように反転 */
+            transform: scaleX(-1);
         }
         video {
             width: 100%;
             height: 100%;
             object-fit: cover;
         }
-        /* AI検知状態のインジケーター */
         .ai-indicator {
             position: absolute;
             top: 24px;
@@ -161,7 +155,6 @@
             background-color: var(--primary-color);
             box-shadow: 0 0 8px var(--primary-color);
         }
-        
         #statusMessage {
             position: absolute;
             bottom: 24px;
@@ -224,7 +217,7 @@
                 </div>
             </div>
 
-            <div id="statusMessage">床に置いてスタート！</div>
+            <div id="statusMessage">カメラを許可してね</div>
         </div>
 
         <button id="resetBtn" class="btn-reset">リセット</button>
@@ -235,11 +228,9 @@
         let target = 20;
         let jaVoice = null;
         let isCompleted = false;
-
-        // ✨ 筋トレ状態の管理フラグ
         let isDown = false; 
+        let aiInitialized = false; // AIが最初に顔を捉えたかどうかのフラグ
 
-        // ゲージの計算
         const RADIUS = 98;
         const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
 
@@ -257,7 +248,6 @@
         progressBar.style.strokeDasharray = `${CIRCUMFERENCE} ${CIRCUMFERENCE}`;
         progressBar.style.strokeDashoffset = CIRCUMFERENCE;
 
-        // --- 💾 【機能3】LocalStorageを使った永続保存ロジック ---
         function loadTotalCount() {
             const savedTotal = localStorage.getItem('pushup_total') || 0;
             totalStatsEl.textContent = `累計: ${savedTotal}回`;
@@ -265,13 +255,11 @@
 
         function saveToTotal(reps) {
             const currentTotal = parseInt(localStorage.getItem('pushup_total') || 0);
-            const newTotal = currentTotal + reps;
-            localStorage.setItem('pushup_total', newTotal);
+            localStorage.setItem('pushup_total', currentTotal + reps);
             loadTotalCount();
         }
-        loadTotalCount(); // 起動時に読み込み
+        loadTotalCount();
 
-        // 音声の準備
         function loadVoices() {
             const voices = speechSynthesis.getVoices();
             jaVoice = voices.find(voice => voice.lang === 'ja-JP' && voice.name.includes('Google')) || 
@@ -301,7 +289,7 @@
             count++;
             counterEl.textContent = count;
             updateGauge();
-            saveToTotal(1); // 1回ごとにLocalStorageの累計に即時加算
+            saveToTotal(1);
 
             if (count >= target) {
                 isCompleted = true;
@@ -312,31 +300,28 @@
             }
         }
 
-        // --- 🤖 【機能1】MediaPipeによる顔認識・深度ロジック ---
+        // --- 🤖 改良されたAI認識判定ロジック ---
         function onResults(results) {
-            // 最初の一画面目が取れたらインジケーターを緑にする
-            if (!aiDot.classList.contains('active')) {
+            // カメラから1フレームでもデータが来たら、まずインジケーターを緑にする
+            if (!aiInitialized) {
+                aiInitialized = true;
                 aiDot.classList.add('active');
                 aiText.textContent = "AI解析中";
-                statusMessage.textContent = "準備完了！";
+                statusMessage.textContent = "準備完了！床に置いてね";
             }
 
             if (results.detections && results.detections.length > 0) {
                 const detection = results.detections[0];
-                // 顔のバウンディングボックスの「横幅」を取得
-                // カメラに近づく（体を下げる）と、画面内占有率(width)が大きくなる
                 const faceWidth = detection.boundingBox.width;
 
-                // 📐 しきい値の調整（一般的な床置き距離のベストバランス）
-                const DOWN_THRESHOLD = 0.28; // これ以上大きくなったら「体を下げた」
-                const UP_THRESHOLD = 0.22;   // これ以下に小さくなったら「体を上げた」
+                // スマホの広角レンズに最適化したしきい値（かなり近づかなくても反応するように甘めに設定）
+                const DOWN_THRESHOLD = 0.25; 
+                const UP_THRESHOLD = 0.20;   
 
                 if (!isDown && faceWidth > DOWN_THRESHOLD) {
-                    // 体が下がった！
                     isDown = true;
                     statusMessage.textContent = "キープ！";
                 } else if (isDown && faceWidth < UP_THRESHOLD) {
-                    // 体が上がった（1回カウント！）
                     isDown = false;
                     statusMessage.textContent = "アップ！";
                     handleCount();
@@ -344,19 +329,17 @@
             }
         }
 
-        // MediaPipe Face Detectionの初期設定
         const faceDetection = new FaceDetection({
-            locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/face_detection/${file}`
+            locateFile: (file) => `https://cdnjs.cloudflare.com/ajax/libs/mediapipe-face_detection/0.4.1646425243/${file}`
         });
         
         faceDetection.setOptions({
-            model: 'short', // 近距離用軽量モデル
-            minDetectionConfidence: 0.3
+            model: 'short',
+            minDetectionConfidence: 0.3 // 認識感度を最大までアップ
         });
         
         faceDetection.onResults(onResults);
 
-        // カメラ映像の配信・AIループ開始
         const camera = new Camera(videoElement, {
             onFrame: async () => {
                 await faceDetection.send({ image: videoElement });
@@ -366,7 +349,6 @@
         });
         camera.start();
 
-        // ターゲット変更・リセット処理
         targetSelect.addEventListener('change', (e) => {
             target = parseInt(e.target.value);
             targetLabel.textContent = target;
