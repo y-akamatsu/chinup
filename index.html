@@ -67,6 +67,7 @@
             cursor: pointer;
             position: relative;
             transition: transform 0.05s ease, border-color 0.2s;
+            box-sizing: border-box;
         }
         .tap-zone:active {
             transform: scale(0.97);
@@ -94,7 +95,7 @@
             stroke: var(--primary-color);
             stroke-width: 10;
             stroke-linecap: round;
-            transition: stroke-dashoffset 0.2s ease-out;
+            transition: stroke-dashoffset 0.1s ease-out;
         }
         .counter-box {
             position: absolute;
@@ -120,7 +121,7 @@
             color: var(--primary-color);
         }
         
-        /* 📅 進化したカレンダー */
+        /* 📅 カレンダーエリア */
         .calendar-card {
             background: var(--card-bg);
             width: 100%;
@@ -128,8 +129,8 @@
             border: 2px solid var(--calendar-border);
             padding: 16px;
             box-sizing: border-box;
+            min-height: 280px; /* 高さが縮むのを防止 */
         }
-        /* 月移動ボタンのヘッダー */
         .calendar-nav {
             display: flex;
             justify-content: space-between;
@@ -140,7 +141,7 @@
             background: #334155;
             color: var(--text-main);
             border: none;
-            padding: 6px 14px;
+            padding: 8px 16px;
             border-radius: 8px;
             font-weight: bold;
             cursor: pointer;
@@ -153,37 +154,42 @@
             font-weight: bold;
             color: var(--text-main);
         }
+        
+        /* バグの原因になっていたtable構造を標準的なdiv/flexに変更 */
         .calendar-grid {
-            display: table;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
             width: 100%;
-            border-collapse: collapse;
         }
         .calendar-row {
-            display: table-row;
+            display: flex;
+            justify-content: space-between;
+            width: 100%;
         }
         .calendar-cell {
-            display: table-cell;
             width: 14.28%;
             text-align: center;
-            padding: 8px 0;
             font-size: 12px;
             color: var(--text-sub);
-            vertical-align: middle;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 32px;
         }
         .calendar-day-header {
             font-weight: bold;
             color: #64748b;
             border-bottom: 1px solid var(--calendar-border);
-            padding-bottom: 8px;
+            padding-bottom: 6px;
+            margin-bottom: 4px;
         }
         
-        /* ✨ 日付ボタンのデザイン調整 */
         .day-btn {
             display: block;
             width: 28px;
             height: 28px;
             line-height: 26px;
-            margin: 0 auto;
             border-radius: 50%;
             background: transparent;
             color: var(--text-main);
@@ -192,16 +198,16 @@
             cursor: pointer;
             box-sizing: border-box;
             padding: 0;
+            text-align: center;
         }
-        /* 筋トレ実施済みの日のスタイル */
         .workout-day {
-            background-color: rgba(0, 230, 118, 0.12);
+            background-color: rgba(0, 230, 118, 0.15);
             color: var(--primary-color);
             font-weight: bold;
             border: 1px solid var(--primary-color);
         }
         .empty-cell {
-            color: transparent;
+            visibility: hidden;
         }
         .btn-reset {
             background: transparent;
@@ -265,7 +271,6 @@
         let jaVoice = null;
         let isCompleted = false;
 
-        // 📅 カレンダー表示管理用の日付オブジェクト
         let currentCalendarDate = new Date();
 
         const RADIUS = 60;
@@ -284,7 +289,8 @@
         const prevMonthBtn = document.getElementById('prevMonthBtn');
         const nextMonthBtn = document.getElementById('nextMonthBtn');
 
-        progressBar.style.strokeDasharray = `${CIRCUMFERENCE} ${CIRCUMFERENCE}`;
+        // 🟢 メーターが最初から1周してしまうバグを修正（DasharrayとDashoffsetを完全に同期）
+        progressBar.style.strokeDasharray = CIRCUMFERENCE;
         progressBar.style.strokeDashoffset = CIRCUMFERENCE;
 
         function formatDateString(year, month, day) {
@@ -298,7 +304,6 @@
             return formatDateString(now.getFullYear(), now.getMonth(), now.getDate());
         }
 
-        // 💾 データの読み込みと集計
         function loadLogs() {
             const logs = JSON.parse(localStorage.getItem('pushup_logs') || '{}');
             let total = 0;
@@ -309,7 +314,6 @@
             renderCalendar(logs);
         }
 
-        // 💾 今日の回数を保存
         function saveLog(reps) {
             const logs = JSON.parse(localStorage.getItem('pushup_logs') || '{}');
             const today = getTodayString();
@@ -318,12 +322,12 @@
             loadLogs();
         }
 
-        // ✨ 【新機能】特定の日の回数を直接書き換える関数
+        // 編集機能
         window.editLogValue = function(dateStr, currentReps) {
             const displayDate = dateStr.replace(/(\d{4})-(\d{2})-(\d{2})/, "$1年$2月$3日");
             const input = prompt(`【回数編集】\n${displayDate} の合計回数を入力してください（0にすると記録が消えます）:`, currentReps);
             
-            if (input === null) return; // キャンセル
+            if (input === null) return;
 
             const newReps = parseInt(input);
             if (isNaN(newReps) || newReps < 0) {
@@ -333,16 +337,16 @@
 
             const logs = JSON.parse(localStorage.getItem('pushup_logs') || '{}');
             if (newReps === 0) {
-                delete logs[dateStr]; // 0回ならデータを削除して綺麗に
+                delete logs[dateStr];
             } else {
-                logs[dateStr] = newReps; // 指定の数値で上書き
+                logs[dateStr] = newReps;
             }
 
             localStorage.setItem('pushup_logs', JSON.stringify(logs));
-            loadLogs(); // 画面再描画
+            loadLogs();
         };
 
-        // 📅 カレンダー描画（過去・未来月対応版）
+        // 📅 ブラウザ起因のエラーが出ないよう、安全なDOM生成に修正
         function renderCalendar(logs) {
             const year = currentCalendarDate.getFullYear();
             const month = currentCalendarDate.getMonth();
@@ -353,10 +357,10 @@
             // 曜日ヘッダー
             const days = ['日', '月', '火', '水', '木', '金', '土'];
             let headerRow = document.createElement('div');
-            headerRow.className = 'calendar-row';
+            headerRow.className = 'calendar-row calendar-day-header';
             days.forEach(d => {
                 const cell = document.createElement('div');
-                cell.className = 'calendar-cell calendar-day-header';
+                cell.className = 'calendar-cell';
                 cell.textContent = d;
                 headerRow.appendChild(cell);
             });
@@ -366,8 +370,11 @@
             const totalDays = new Date(year, month + 1, 0).getDate();
 
             let currentDay = 1;
+            let finished = false;
 
             for (let i = 0; i < 6; i++) {
+                if (finished) break;
+                
                 let row = document.createElement('div');
                 row.className = 'calendar-row';
                 let hasCells = false;
@@ -380,6 +387,7 @@
                         cell.innerHTML = '<span class="empty-cell">.</span>';
                     } else if (currentDay > totalDays) {
                         cell.innerHTML = '<span class="empty-cell">.</span>';
+                        finished = true;
                     } else {
                         const dateStr = formatDateString(year, month, currentDay);
                         const reps = logs[dateStr] || 0;
@@ -390,12 +398,12 @@
                         
                         if (reps > 0) {
                             btn.classList.add('workout-day');
-                            // タップしたらその日のログを編集できるように関数を紐付ける
-                            btn.setAttribute('onclick', `window.editLogValue('${dateStr}', ${reps})`);
-                        } else {
-                            // 0回の日でもタップすれば後から手動登録できるようにする
-                            btn.setAttribute('onclick', `window.editLogValue('${dateStr}', 0)`);
                         }
+                        
+                        // 全ての日付でタップ編集可能に
+                        btn.onclick = (function(dStr, rCount) {
+                            return function() { window.editLogValue(dStr, rCount); };
+                        })(dateStr, reps);
 
                         cell.appendChild(btn);
                         currentDay++;
@@ -408,7 +416,6 @@
             }
         }
 
-        // ◀ ▶ ボタンのイベント登録
         prevMonthBtn.addEventListener('click', () => {
             currentCalendarDate.setMonth(currentCalendarDate.getMonth() - 1);
             loadLogs();
@@ -422,4 +429,70 @@
         function loadVoices() {
             const voices = speechSynthesis.getVoices();
             jaVoice = voices.find(voice => voice.lang === 'ja-JP' && voice.name.includes('Google')) || 
-                      voices.find(voice
+                      voices.find(voice => voice.lang === 'ja-JP' && voice.name.includes('Otoya')) || 
+                      voices.find(voice => voice.lang === 'ja-JP');
+        }
+        loadVoices();
+        if (speechSynthesis.onvoiceschanged !== undefined) speechSynthesis.onvoiceschanged = loadVoices;
+
+        function speak(text, isFinish = false) {
+            speechSynthesis.cancel();
+            const utterance = new SpeechSynthesisUtterance(text);
+            if (jaVoice) utterance.voice = jaVoice;
+            else utterance.lang = 'ja-JP';
+            utterance.rate = 1.1;
+            utterance.pitch = isFinish ? 1.0 : 0.8;
+            speechSynthesis.speak(utterance);
+        }
+
+        function updateGauge() {
+            const ratio = Math.min(count / target, 1);
+            progressBar.style.strokeDashoffset = CIRCUMFERENCE - (ratio * CIRCUMFERENCE);
+        }
+
+        function handleCount() {
+            if (isCompleted) return;
+            count++;
+            counterEl.textContent = count;
+            updateGauge();
+            saveLog(1);
+
+            if (count >= target) {
+                isCompleted = true;
+                statusMessage.textContent = "🔥 NICE BULK!!! 🔥";
+                speak("目標達成！ナイスバルク！", true);
+            } else {
+                speak(String(count));
+            }
+        }
+
+        // タップイベントを確実に登録
+        tapZone.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            handleCount();
+        });
+        tapZone.addEventListener('mousedown', (e) => {
+            if (e.type === 'mousedown' && 'ontouchstart' in window) return;
+            handleCount();
+        });
+
+        targetSelect.addEventListener('change', (e) => {
+            target = parseInt(e.target.value);
+            targetLabel.textContent = target;
+            resetCount();
+        });
+
+        function resetCount() {
+            count = 0;
+            isCompleted = false;
+            counterEl.textContent = "0";
+            statusMessage.textContent = "アゴでタップ！";
+            updateGauge();
+            speechSynthesis.cancel();
+        }
+        resetBtn.addEventListener('click', resetCount);
+
+        window.addEventListener('DOMContentLoaded', loadLogs);
+    </script>
+</body>
+</html>
