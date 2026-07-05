@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Push-Up Counter with Calendar</title>
+    <title>Push-Up Counter Pro</title>
     <style>
         :root {
             --bg-color: #121824;
@@ -52,12 +52,11 @@
             font-weight: bold;
             outline: none;
         }
-        /* メインカウンターカード */
         .tap-zone {
             background: var(--card-bg);
             width: 100%;
-            height: 45vh;
-            max-height: 320px;
+            height: 35vh;
+            max-height: 260px;
             border-radius: 24px;
             box-shadow: 0 10px 25px rgba(0,0,0,0.3);
             border: 4px solid #334155;
@@ -75,8 +74,8 @@
         }
         .circle-container {
             position: relative;
-            width: 160px;
-            height: 160px;
+            width: 140px;
+            height: 140px;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -104,25 +103,24 @@
             align-items: center;
         }
         .counter-display {
-            font-size: 48px;
+            font-size: 40px;
             font-weight: 900;
             line-height: 1;
         }
         .reps-label {
-            font-size: 12px;
+            font-size: 11px;
             color: var(--text-sub);
             font-weight: bold;
-            margin-top: 2px;
         }
         #statusMessage {
             position: absolute;
-            bottom: 16px;
-            font-size: 14px;
+            bottom: 12px;
+            font-size: 13px;
             font-weight: bold;
             color: var(--primary-color);
         }
         
-        /* ✨ カレンダーエリアのデザイン */
+        /* 📅 進化したカレンダー */
         .calendar-card {
             background: var(--card-bg);
             width: 100%;
@@ -131,11 +129,28 @@
             padding: 16px;
             box-sizing: border-box;
         }
+        /* 月移動ボタンのヘッダー */
+        .calendar-nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+        .calendar-nav button {
+            background: #334155;
+            color: var(--text-main);
+            border: none;
+            padding: 6px 14px;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .calendar-nav button:active {
+            background: #475569;
+        }
         .calendar-header {
             font-size: 16px;
             font-weight: bold;
-            text-align: center;
-            margin-bottom: 12px;
             color: var(--text-main);
         }
         .calendar-grid {
@@ -159,16 +174,28 @@
             font-weight: bold;
             color: #64748b;
             border-bottom: 1px solid var(--calendar-border);
+            padding-bottom: 8px;
         }
-        /* ✨ 筋トレを達成した日の丸バッジ */
-        .workout-day {
+        
+        /* ✨ 日付ボタンのデザイン調整 */
+        .day-btn {
             display: block;
-            width: 26px;
-            height: 26px;
+            width: 28px;
+            height: 28px;
             line-height: 26px;
             margin: 0 auto;
             border-radius: 50%;
-            background-color: rgba(0, 230, 118, 0.15);
+            background: transparent;
+            color: var(--text-main);
+            border: 1px solid transparent;
+            font-size: 12px;
+            cursor: pointer;
+            box-sizing: border-box;
+            padding: 0;
+        }
+        /* 筋トレ実施済みの日のスタイル */
+        .workout-day {
+            background-color: rgba(0, 230, 118, 0.12);
             color: var(--primary-color);
             font-weight: bold;
             border: 1px solid var(--primary-color);
@@ -176,20 +203,13 @@
         .empty-cell {
             color: transparent;
         }
-
-        .actions {
-            display: flex;
-            gap: 12px;
-            width: 100%;
-            justify-content: center;
-        }
         .btn-reset {
             background: transparent;
             border: 2px solid #334155;
             color: var(--text-sub);
-            padding: 8px 20px;
+            padding: 6px 16px;
             border-radius: 20px;
-            font-size: 13px;
+            font-size: 12px;
             cursor: pointer;
             font-weight: bold;
         }
@@ -214,27 +234,28 @@
 
         <div id="tapZone" class="tap-zone">
             <div class="circle-container">
-                <svg class="circle-svg" width="160" height="160">
-                    <circle class="circle-bg" cx="80" cy="80" r="70"></circle>
-                    <circle id="progressBar" class="circle-progress" cx="80" cy="80" r="70"></circle>
+                <svg class="circle-svg" width="140" height="140">
+                    <circle class="circle-bg" cx="70" cy="70" r="60"></circle>
+                    <circle id="progressBar" class="circle-progress" cx="70" cy="70" r="60"></circle>
                 </svg>
                 <div class="counter-box">
                     <div id="counter" class="counter-display">0</div>
                     <div class="reps-label">REPS</div>
-                    <div style="font-size:11px; color:var(--text-sub); margin-top:2px;">/ <span id="targetLabel">20</span>回</div>
+                    <div style="font-size:10px; color:var(--text-sub);">/ <span id="targetLabel">20</span>回</div>
                 </div>
             </div>
-            <div id="statusMessage">アゴでタップしてスタート！</div>
+            <div id="statusMessage">アゴでタップ！</div>
         </div>
 
-        <div class="actions">
-            <button id="resetBtn" class="btn-reset">リセット</button>
-        </div>
+        <button id="resetBtn" class="btn-reset">セッションリセット</button>
 
         <div class="calendar-card">
-            <div id="calendarTitle" class="calendar-header">2026年 7月</div>
-            <div class="calendar-grid" id="calendarGrid">
-                </div>
+            <div class="calendar-nav">
+                <button id="prevMonthBtn">◀</button>
+                <div id="calendarTitle" class="calendar-header">2026年 7月</div>
+                <button id="nextMonthBtn">▶</button>
+            </div>
+            <div class="calendar-grid" id="calendarGrid"></div>
         </div>
     </div>
 
@@ -244,7 +265,10 @@
         let jaVoice = null;
         let isCompleted = false;
 
-        const RADIUS = 70;
+        // 📅 カレンダー表示管理用の日付オブジェクト
+        let currentCalendarDate = new Date();
+
+        const RADIUS = 60;
         const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
 
         const tapZone = document.getElementById('tapZone');
@@ -257,51 +281,71 @@
         const totalStatsEl = document.getElementById('totalStats');
         const calendarGrid = document.getElementById('calendarGrid');
         const calendarTitle = document.getElementById('calendarTitle');
+        const prevMonthBtn = document.getElementById('prevMonthBtn');
+        const nextMonthBtn = document.getElementById('nextMonthBtn');
 
         progressBar.style.strokeDasharray = `${CIRCUMFERENCE} ${CIRCUMFERENCE}`;
         progressBar.style.strokeDashoffset = CIRCUMFERENCE;
 
-        // 📅 今日の日付文字列を取得 (YYYY-MM-DD形式)
-        function getTodayString() {
-            const now = new Date();
-            const y = now.getFullYear();
-            const m = String(now.getMonth() + 1).padStart(2, '0');
-            const d = String(now.getDate()).padStart(2, '0');
-            return `${y}-${m}-${d}`;
+        function formatDateString(year, month, day) {
+            const m = String(month + 1).padStart(2, '0');
+            const d = String(day).padStart(2, '0');
+            return `${year}-${m}-${d}`;
         }
 
-        // 💾 【カレンダー対応】データの読み込みと描画
+        function getTodayString() {
+            const now = new Date();
+            return formatDateString(now.getFullYear(), now.getMonth(), now.getDate());
+        }
+
+        // 💾 データの読み込みと集計
         function loadLogs() {
-            // 履歴データオブジェクトを取得（なければ空のオブジェクト）
             const logs = JSON.parse(localStorage.getItem('pushup_logs') || '{}');
-            
-            // 累計回数の計算
             let total = 0;
             for (let date in logs) {
                 total += logs[date];
             }
             totalStatsEl.textContent = `累計: ${total}回`;
-
             renderCalendar(logs);
         }
 
-        // 💾 【カレンダー対応】今日の回数を保存
+        // 💾 今日の回数を保存
         function saveLog(reps) {
             const logs = JSON.parse(localStorage.getItem('pushup_logs') || '{}');
             const today = getTodayString();
-            
-            // 今日の既存の回数にプラス
             logs[today] = (logs[today] || 0) + reps;
-            
             localStorage.setItem('pushup_logs', JSON.stringify(logs));
-            loadLogs(); // カレンダーと累計を再描画
+            loadLogs();
         }
 
-        // 📅 カレンダー描画エンジン（WeasyPrint互換のtable構造で出力）
+        // ✨ 【新機能】特定の日の回数を直接書き換える関数
+        window.editLogValue = function(dateStr, currentReps) {
+            const displayDate = dateStr.replace(/(\d{4})-(\d{2})-(\d{2})/, "$1年$2月$3日");
+            const input = prompt(`【回数編集】\n${displayDate} の合計回数を入力してください（0にすると記録が消えます）:`, currentReps);
+            
+            if (input === null) return; // キャンセル
+
+            const newReps = parseInt(input);
+            if (isNaN(newReps) || newReps < 0) {
+                alert("正しい数値を入力してください。");
+                return;
+            }
+
+            const logs = JSON.parse(localStorage.getItem('pushup_logs') || '{}');
+            if (newReps === 0) {
+                delete logs[dateStr]; // 0回ならデータを削除して綺麗に
+            } else {
+                logs[dateStr] = newReps; // 指定の数値で上書き
+            }
+
+            localStorage.setItem('pushup_logs', JSON.stringify(logs));
+            loadLogs(); // 画面再描画
+        };
+
+        // 📅 カレンダー描画（過去・未来月対応版）
         function renderCalendar(logs) {
-            const now = new Date();
-            const year = now.getFullYear();
-            const month = now.getMonth(); // 0-11
+            const year = currentCalendarDate.getFullYear();
+            const month = currentCalendarDate.getMonth();
             
             calendarTitle.textContent = `${year}年 ${month + 1}月`;
             calendarGrid.innerHTML = '';
@@ -318,14 +362,12 @@
             });
             calendarGrid.appendChild(headerRow);
 
-            // 月の初日と総日数
             const firstDay = new Date(year, month, 1).getDay();
             const totalDays = new Date(year, month + 1, 0).getDate();
 
             let currentDay = 1;
-            let html = '';
 
-            for (let i = 0; i < 6; i++) { // 最大6週間分
+            for (let i = 0; i < 6; i++) {
                 let row = document.createElement('div');
                 row.className = 'calendar-row';
                 let hasCells = false;
@@ -339,93 +381,45 @@
                     } else if (currentDay > totalDays) {
                         cell.innerHTML = '<span class="empty-cell">.</span>';
                     } else {
-                        const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(currentDay).padStart(2, '0')}`;
+                        const dateStr = formatDateString(year, month, currentDay);
+                        const reps = logs[dateStr] || 0;
                         
-                        // ✨ その日に筋トレ履歴（ログ）があれば緑丸にする
-                        if (logs[dateStr] && logs[dateStr] > 0) {
-                            cell.innerHTML = `<span class="workout-day" onclick="alert('${month+1}月${currentDay}日: ${logs[dateStr]}回トレ完了！')">${currentDay}</span>`;
+                        const btn = document.createElement('button');
+                        btn.className = 'day-btn';
+                        btn.textContent = currentDay;
+                        
+                        if (reps > 0) {
+                            btn.classList.add('workout-day');
+                            // タップしたらその日のログを編集できるように関数を紐付ける
+                            btn.setAttribute('onclick', `window.editLogValue('${dateStr}', ${reps})`);
                         } else {
-                            cell.textContent = currentDay;
+                            // 0回の日でもタップすれば後から手動登録できるようにする
+                            btn.setAttribute('onclick', `window.editLogValue('${dateStr}', 0)`);
                         }
+
+                        cell.appendChild(btn);
                         currentDay++;
                         hasCells = true;
                     }
                     row.appendChild(cell);
                 }
-                if (i > 0 && !hasCells) break; // 7日とも空ならループ終了
+                if (i > 0 && !hasCells) break;
                 calendarGrid.appendChild(row);
             }
         }
 
-        // 音声エンジン
+        // ◀ ▶ ボタンのイベント登録
+        prevMonthBtn.addEventListener('click', () => {
+            currentCalendarDate.setMonth(currentCalendarDate.getMonth() - 1);
+            loadLogs();
+        });
+        nextMonthBtn.addEventListener('click', () => {
+            currentCalendarDate.setMonth(currentCalendarDate.getMonth() + 1);
+            loadLogs();
+        });
+
+        // 音声
         function loadVoices() {
             const voices = speechSynthesis.getVoices();
             jaVoice = voices.find(voice => voice.lang === 'ja-JP' && voice.name.includes('Google')) || 
-                      voices.find(voice => voice.lang === 'ja-JP' && voice.name.includes('Otoya')) || 
-                      voices.find(voice => voice.lang === 'ja-JP');
-        }
-        loadVoices();
-        if (speechSynthesis.onvoiceschanged !== undefined) speechSynthesis.onvoiceschanged = loadVoices;
-
-        function speak(text, isFinish = false) {
-            speechSynthesis.cancel();
-            const utterance = new SpeechSynthesisUtterance(text);
-            if (jaVoice) utterance.voice = jaVoice;
-            else utterance.lang = 'ja-JP';
-            utterance.rate = 1.1;
-            utterance.pitch = isFinish ? 1.0 : 0.8;
-            speechSynthesis.speak(utterance);
-        }
-
-        function updateGauge() {
-            const ratio = Math.min(count / target, 1);
-            progressBar.style.strokeDashoffset = CIRCUMFERENCE - (ratio * CIRCUMFERENCE);
-        }
-
-        function handleCount() {
-            if (isCompleted) return;
-
-            count++;
-            counterEl.textContent = count;
-            updateGauge();
-            saveLog(1); // 1回ごとに即時カレンダーデータへ保存・反映
-
-            if (count >= target) {
-                isCompleted = true;
-                statusMessage.textContent = "🔥 NICE BULK!!! 🔥";
-                speak("目標達成！ナイスバルク！", true);
-            } else {
-                speak(String(count));
-            }
-        }
-
-        tapZone.addEventListener('touchstart', (e) => {
-            e.preventDefault();
-            handleCount();
-        });
-        tapZone.addEventListener('mousedown', (e) => {
-            if (e.type === 'mousedown' && 'ontouchstart' in window) return;
-            handleCount();
-        });
-
-        targetSelect.addEventListener('change', (e) => {
-            target = parseInt(e.target.value);
-            targetLabel.textContent = target;
-            resetCount();
-        });
-
-        function resetCount() {
-            count = 0;
-            isCompleted = false;
-            counterEl.textContent = "0";
-            statusMessage.textContent = "アゴでタップしてスタート！";
-            updateGauge();
-            speechSynthesis.cancel();
-        }
-        resetBtn.addEventListener('click', resetCount);
-
-        // 初期読み込み
-        window.addEventListener('DOMContentLoaded', loadLogs);
-    </script>
-</body>
-</html>
+                      voices.find(voice
